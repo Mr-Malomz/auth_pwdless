@@ -1,54 +1,90 @@
-import styles from '../styles/Home.module.css';
-import { WebAuth } from 'auth0-js';
+import styles from "../styles/Home.module.css";
+import { useState } from "react";
+import { useRouter } from "next/dist/client/router";
+import { webAuth } from "../config/auth";
 
 export default function Home() {
-  const webAuth = new WebAuth({
-    clientID: 'NhVV2IVnlGvIw7AdWk3vOFucYe9N8bFS',
-    domain: 'https://dev-ofb1ufg6.us.auth0.com',
-    redirectUri: 'http://localhost.com',
-    responseType: 'token',
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [error, setError] = useState({
+    emailError: false,
+    otpError: false
   });
+  const [success, setSuccess] = useState(false);
 
-  const handleAuth = () => {
+  const handleAuth = (e) => {
+    e.preventDefault();
     webAuth.passwordlessStart(
       {
-        connection: 'email',
-        send: 'code',
-        email: 'demlabz@gmail.com',
+        connection: "email",
+        send: "code",
+        email: email
       },
       function (err, res) {
-        console.log(err);
-        console.log(res);
+        if (res.Id) {
+          setSuccess(true);
+        } else {
+          setError({ ...error, emailError: true });
+        }
       }
     );
   };
 
-  const handleVerifyToken = () => {
+  const handleVerifyToken = (e) => {
+    e.preventDefault();
     webAuth.passwordlessLogin(
       {
-        connection: 'email',
-        email: 'demlabz@gmail.com',
-        verificationCode: '531959',
+        connection: "email",
+        email: email,
+        verificationCode: otp
       },
       function (err, res) {
-        console.log(err);
         console.log(res);
+        console.log(err);
+        if (err) {
+          setError({ ...error, otpError: true });
+        } else {
+          router.push("/coupon");
+        }
       }
     );
   };
 
   return (
     <div className={styles.container}>
-      <form>
-        <input type='email' className={styles.input} />
-        <button className={styles.copy}>Get Coupon</button>
-      </form>
-      <form>
-        <input type='email' className={styles.input} />
-        <button className={styles.copy}>Get Coupon</button>
-      </form>
-      <button onClick={handleAuth}>Auth0</button>
-      <button onClick={handleVerifyToken}>Token</button>
+      {!success && (
+        <form onSubmit={handleAuth}>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={styles.input}
+            placeholder="enter email"
+            required
+          />
+          <button className={styles.button}>Get Coupon</button>
+          {error.emailError && (
+            <p className={styles.error}>Error sending mail</p>
+          )}
+        </form>
+      )}
+      {success && (
+        <form onSubmit={handleVerifyToken}>
+          <input
+            type="number"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value)}
+            className={styles.input}
+            placeholder="input token"
+            required
+          />
+          <button className={styles.button}>Verify Token</button>
+          {error.otpError && (
+            <p className={styles.error}>Error validating OTP</p>
+          )}
+        </form>
+      )}
     </div>
   );
 }
